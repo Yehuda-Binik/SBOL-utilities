@@ -273,13 +273,17 @@ class SBOL3To2ConversionVisitor:
     def visit_sub_component(self, sub3: sbol3.SubComponent):
         # Priority: 1
 
-        component2 = sbol2.Component(sub3.identity, )
-        module2 = sbol2.Module(sub3.identity, definition=sub3.instance_of, )
-            # mapsTo - optional
-            # measures - optional
-        functional_component2 = sbol2.FunctionalComponent(sub3.identity, )
-        """
-        raise NotImplementedError('Conversion of SubComponent from SBOL3 to SBOL2 not yet implemented')
+        # Make the Component, Module, and Functional_Component objects and add them to the document
+        component2 = sbol2.Component(sub3.identity)
+        module2 = sbol2.Module(sub3.identity, definition=sub3.instance_of)
+        functional_component2 = sbol2.FunctionalComponent(sub3.identity)
+        self.doc2.addSequence(component2)
+        self.doc2.addSequence(module2)
+        self.doc2.addSequence(functional_component2)
+        # Map over all other TopLevel properties and extensions not covered by the constructor
+        self._convert_toplevel(sub3, component2)
+        self._convert_toplevel(sub3, module2)
+        self._convert_toplevel(sub3, functional_component2)
 
     def visit_unit_division(self, a: sbol3.UnitDivision):
         # Priority: 4
