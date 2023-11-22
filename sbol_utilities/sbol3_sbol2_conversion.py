@@ -270,8 +270,15 @@ class SBOL3To2ConversionVisitor:
         # Priority: 4
         raise NotImplementedError('Conversion of SingularUnit from SBOL3 to SBOL2 not yet implemented')
 
-    def visit_sub_component(self, a: sbol3.SubComponent):
+    def visit_sub_component(self, sub3: sbol3.SubComponent):
         # Priority: 1
+
+        component2 = sbol2.Component(sub3.identity, )
+        module2 = sbol2.Module(sub3.identity, definition=sub3.instance_of, )
+            # mapsTo - optional
+            # measures - optional
+        functional_component2 = sbol2.FunctionalComponent(sub3.identity, )
+        """
         raise NotImplementedError('Conversion of SubComponent from SBOL3 to SBOL2 not yet implemented')
 
     def visit_unit_division(self, a: sbol3.UnitDivision):

@@ -129,6 +129,27 @@ class TestDirectSBOL2SBOL3Conversion(unittest.TestCase):
             doc2_loop.write(tmp2)
             self.assertFalse(file_diff(str(tmp2), str(TEST_FILES / 'sbol_3to2_collection.xml')))
 
+    def test_3to2_sub_component_conversion(self):
+        """Test ability to convert a collection from SBOL3 to SBOL2"""
+        # Load an SBOL3 document and check its contents
+        doc3 = sbol3.Document()
+        doc3.read(TEST_FILES / 'sbol3_toggle_switch.nt')
+        # Convert to SBOL2 and check contents
+        doc2 = convert3to2(doc3, True)
+        #report = doc2.validate()
+        #self.assertEqual(len(report), 0, f'Validation failed: {report}')
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp2 = Path(tmpdir) / 'doc2.xml'
+            doc2.write(tmp2)
+            self.assertFalse(file_diff(str(tmp2), str(TEST_FILES / 'sbol_3to2_collection.xml')))
+            doc3_loop = convert2to3(doc2, use_native_converter=True)
+            self.assertEqual(len(doc3_loop.validate()), 0)
+            tmp3 = Path(tmpdir) / 'doc3_loop.nt'
+            doc3_loop.write(tmp3)
+            self.assertFalse(file_diff(str(tmp3), str(TEST_FILES / 'sbol3_collection.nt')))
+
+
+
 
 if __name__ == '__main__':
     unittest.main()
