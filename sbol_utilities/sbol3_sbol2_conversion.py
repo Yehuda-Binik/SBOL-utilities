@@ -22,6 +22,7 @@ class SBOL3To2ConversionVisitor:
     doc2: sbol2.Document
 
     def __init__(self, doc3: sbol3.Document):
+        self.doc3 = doc3
         # Create the target document
         self.doc2 = sbol2.Document()
         #   # Immediately run the conversion
@@ -157,11 +158,30 @@ class SBOL3To2ConversionVisitor:
         cp2.roles = cp3.roles
         cp2.sequences = cp3.sequences
         if cp3.features:
-            raise NotImplementedError('Conversion of Component features from SBOL3 to SBOL2 not yet implemented')
+            for feature in cp3.features:
+                if type(feature) == sbol3.subcomponent.SubComponent:
+                    try:
+                        self.visit_sub_component(feature)
+                    except NotImplementedError as e:
+                        print(f"\033[91m{e}\033[0m")
+                if type(feature) == sbol3.compref.ComponentReference:
+                    try:
+                        self.visit_component_reference(feature)
+                    except NotImplementedError as e:
+                        print(f"\033[91m{e}\033[0m")
         if cp3.interactions:
-            raise NotImplementedError('Conversion of Component interactions from SBOL3 to SBOL2 not yet implemented')
+            for interaction in cp3.interactions:
+                try:
+                    self.visit_interaction(interaction)
+                except NotImplementedError as e:
+                    print(f"\033[91m{e}\033[0m")
         if cp3.constraints:
-            raise NotImplementedError('Conversion of Component constraints from SBOL3 to SBOL2 not yet implemented')
+            for constraint in cp3.constraints:
+                try:
+                    pass
+                    self.visit_constraint(constraint)
+                except NotImplementedError as e:
+                    print(f"\033[91m{e}\033[0m")
         if cp3.interface:
             raise NotImplementedError('Conversion of Component interface from SBOL3 to SBOL2 not yet implemented')
         if cp3.models:
@@ -169,13 +189,29 @@ class SBOL3To2ConversionVisitor:
         # Map over all other TopLevel properties and extensions not covered by the constructor
         self._convert_toplevel(cp3, cp2)
 
-    def visit_component_reference(self, a: sbol3.ComponentReference):
+    def visit_component_reference(self, comp_ref3: sbol3.ComponentReference):
         # Priority: 3
         raise NotImplementedError('Conversion of ComponentReference from SBOL3 to SBOL2 not yet implemented')
 
-    def visit_constraint(self, a: sbol3.Constraint):
+    def visit_constraint(self, constraint: sbol3.Constraint):
         # Priority: 2
-        raise NotImplementedError('Conversion of Constraint from SBOL3 to SBOL2 not yet implemented')
+
+        if constraint.restriction == "http://sbols.org/v3#verifyIdentical":
+            maps_to = sbol2.mapsto.MapsTo(constraint.identity, refinement="http://sbols.org/v2#verifyIdentical")
+            module_definition = sbol2.ModuleDefinition(constraint.identity)
+            module_definition.modules.add(maps_to)
+            self.doc2.addModuleDefinition(module_definition)
+            local = sbol2.Component(constraint.object)
+            remote = sbol2.Component(self.doc3.find(constraint.subject).refers_to)
+            maps_to.local = local
+            maps_to.remote = remote
+
+
+
+
+        if constraint.restriction == "http://sbols.org/v3#replaces":
+            raise NotImplementedError(
+                'Conversion of Constraint from SBOL3 to SBOL2 with replaces restriction not yet implemented')
 
     def visit_cut(self, a: sbol3.Cut):
         # Priority: 2
@@ -262,7 +298,7 @@ class SBOL3To2ConversionVisitor:
         # Map over all other TopLevel properties and extensions not covered by the constructor
         self._convert_toplevel(seq3, seq2)
 
-    def visit_sequence_feature(self, a: sbol3.SequenceFeature):
+    def visit_sequence_feature(self, feat3: sbol3.SequenceFeature):
         # Priority: 1
         raise NotImplementedError('Conversion of SequenceFeature from SBOL3 to SBOL2 not yet implemented')
 
@@ -273,17 +309,27 @@ class SBOL3To2ConversionVisitor:
     def visit_sub_component(self, sub3: sbol3.SubComponent):
         # Priority: 1
 
-        # Make the Component, Module, and Functional_Component objects and add them to the document
+
+        # Make the Component, Module, or Functional_Component objects and add them to the document
+        # TODO Handle converting sub_components into Modules and FunctionalEntities when necessary
         component2 = sbol2.Component(sub3.identity)
-        module2 = sbol2.Module(sub3.identity, definition=sub3.instance_of)
-        functional_component2 = sbol2.FunctionalComponent(sub3.identity)
-        self.doc2.addSequence(component2)
-        self.doc2.addSequence(module2)
-        self.doc2.addSequence(functional_component2)
-        # Map over all other TopLevel properties and extensions not covered by the constructor
-        self._convert_toplevel(sub3, component2)
-        self._convert_toplevel(sub3, module2)
-        self._convert_toplevel(sub3, functional_component2)
+        component2.roles = sub3.roles
+        component2.roleIntegration = sub3.role_integration
+        component2.sourceLocations = sub3.source_locations
+        self.doc2.addComponentDefinition(component2)
+
+        module2 = sbol2.Module(sub3.identity)
+        module2.definition = sub3.instance_of
+        print("JKLFDSJZFKLDSJLKSDJKLDS")
+        print(module2)
+        self.doc2.addModuleDefinition(module2)
+        # print(f"Module: {self.doc2.getModuleDefinition('https://synbiohub.org/public/igem/device1_ecoli/SubComponent3')}")
+        print(f"components: {self.doc2.componentDefinitions}")
+
+
+        raise NotImplementedError(
+            'Conversion of SubComponent from SBOL3 to SBOL2 not yet implemented in case of Module and FunctionalEntities')
+
 
     def visit_unit_division(self, a: sbol3.UnitDivision):
         # Priority: 4
@@ -433,8 +479,13 @@ class SBOL2To3ConversionVisitor:
         # Map over all other TopLevel properties and extensions not covered by the constructor
         self._convert_toplevel(cd2, cp3)
 
-    def visit_component(self, a: sbol2.Component):
+    def visit_component(self, comp2: sbol2.Component):
         # Priority: 2
+        sub3 = sbol3.SubComponent(comp2.identity)
+        comp2.roles = sub3.roles
+        comp2.roleIntegration = sub3.role_integration
+        comp2.sourceLocations = sub3.source_locations
+        self.doc3.add(sub3)
         raise NotImplementedError('Conversion of Component from SBOL2 to SBOL3 not yet implemented')
 
     def visit_cut(self, a: sbol2.Cut):

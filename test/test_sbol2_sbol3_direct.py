@@ -129,24 +129,71 @@ class TestDirectSBOL2SBOL3Conversion(unittest.TestCase):
             doc2_loop.write(tmp2)
             self.assertFalse(file_diff(str(tmp2), str(TEST_FILES / 'sbol_3to2_collection.xml')))
 
-    def test_3to2_sub_component_conversion(self):
-        """Test ability to convert a collection from SBOL3 to SBOL2"""
+    def test_3to2_subcomponent_test(self):
+        """Test ability to convert a sub_component from SBOL3 to SBOL2"""
         # Load an SBOL3 document and check its contents
         doc3 = sbol3.Document()
-        doc3.read(TEST_FILES / 'sbol3_toggle_switch.nt')
+        doc3.read(TEST_FILES / 'subcomponent_test_3_bare_bones.nt')
         # Convert to SBOL2 and check contents
-        doc2 = convert3to2(doc3, True)
-        #report = doc2.validate()
-        #self.assertEqual(len(report), 0, f'Validation failed: {report}')
+        doc2 = sbol2.Document()
+        doc2 = convert3to2(doc3, use_native_converter=True)
+
+        # report = doc2.validate()
+        # self.assertEqual(len(report), 0, f'Validation failed: {report}')
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp2 = Path(tmpdir) / 'doc2.xml'
             doc2.write(tmp2)
-            self.assertFalse(file_diff(str(tmp2), str(TEST_FILES / 'sbol_3to2_collection.xml')))
+            with open(tmp2, "r") as file:
+                # Read the contents of the file
+                file_contents = file.read()
+
+                # Print the contents
+            # self.assertFalse(file_diff(str(tmp2), str(TEST_FILES / 'sbol_3to2_collection.xml')))
             doc3_loop = convert2to3(doc2, use_native_converter=True)
             self.assertEqual(len(doc3_loop.validate()), 0)
             tmp3 = Path(tmpdir) / 'doc3_loop.nt'
             doc3_loop.write(tmp3)
-            self.assertFalse(file_diff(str(tmp3), str(TEST_FILES / 'sbol3_collection.nt')))
+
+            print("DOC_3")
+            print(doc3)
+            component_list = []
+            for object in doc3.objects:
+                if type(object) == sbol3.component.Component:
+                    component_list.append(object)
+            subcomponent_list = []
+            for component in component_list:
+                print(component.display_id)
+                print(f"Type: {component.types}")
+                for feat in component.features:
+                    if type(feat) == sbol3.subcomponent.SubComponent:
+                        print(f"\tInstance Of: {feat.instance_of}")
+                        print(f"\t\tRoles: {feat.roles}")
+                        print(f"\t\tRole Integration: {feat.role_integration}")
+                        print(f"\t\tSource Locations: {feat.source_locations}")
+
+            print("\nDOC_2")
+            print(doc2)
+            for object in doc2:
+                if type(object) == sbol2.componentdefinition.ComponentDefinition:
+                    print(object)
+                    print(f"\tComponents: {object.components}")
+
+
+            print("\nDOCK_3_loop")
+            print(doc3_loop)
+            component_list = []
+            for object in doc3_loop.objects:
+                if type(object) == sbol3.component.Component:
+                    component_list.append(object)
+            for component in component_list:
+                print(component.display_id)
+                for feat in component.features:
+                    print("\t" + str(type(feat)))
+
+            self.assertFalse(file_diff(str(tmp3), str(TEST_FILES / 'subcomponent_test_3_bare_bones.nt')))
+
+
+
 
 
 
