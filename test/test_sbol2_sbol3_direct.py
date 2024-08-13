@@ -150,10 +150,7 @@ class TestDirectSBOL2SBOL3Conversion(unittest.TestCase):
 
                 # Print the contents
             # self.assertFalse(file_diff(str(tmp2), str(TEST_FILES / 'sbol_3to2_collection.xml')))
-            doc3_loop = convert2to3(doc2, use_native_converter=True)
-            self.assertEqual(len(doc3_loop.validate()), 0)
-            tmp3 = 'doc3_loop.nt'
-            doc3_loop.write(tmp3)
+
 
 
             print("DOC_3")
@@ -174,6 +171,11 @@ class TestDirectSBOL2SBOL3Conversion(unittest.TestCase):
                         print(f"\t\tRoles: {feat.roles}")
                         print(f"\t\tRole Integration: {feat.role_integration}")
                         print(f"\t\tSource Locations: {feat.source_locations}")
+
+            doc3_loop = convert2to3(doc2, use_native_converter=True)
+            self.assertEqual(len(doc3_loop.validate()), 0)
+            tmp3 = 'doc3_loop.nt'
+            doc3_loop.write(tmp3)
 
             print("\nDOC_2")
             print(doc2)

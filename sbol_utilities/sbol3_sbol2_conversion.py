@@ -438,7 +438,7 @@ class SBOL2To3ConversionVisitor:
         # Priority: 2
         raise NotImplementedError('Conversion of CombinatorialDerivation from SBOL2 to SBOL3 not yet implemented')
 
-    def visit_component_definition(self, cd2: sbol2.ComponentDefinition):
+    def visit_component_definition(self, comp_def2: sbol2.ComponentDefinition):
         # Remap type if it's one of the ones that needs remapping; otherwise pass through unchanged
         type_map = {sbol2.BIOPAX_DNA: sbol3.SBO_DNA,
                     'http://www.biopax.org/release/biopax-level3.owl#Dna': sbol3.SBO_DNA,  # TODO: make reversible
@@ -447,32 +447,34 @@ class SBOL2To3ConversionVisitor:
                     sbol2.BIOPAX_PROTEIN: sbol3.SBO_PROTEIN,
                     sbol2.BIOPAX_SMALL_MOLECULE: sbol3.SBO_SIMPLE_CHEMICAL,
                     sbol2.BIOPAX_COMPLEX: sbol3.SBO_NON_COVALENT_COMPLEX}
-        types3 = [type_map.get(t, t) for t in cd2.types]
+        types3 = [type_map.get(t, t) for t in comp_def2.types]
         # Make the Component object and add it to the document
-        cp3 = sbol3.Component(cd2.identity, types3, namespace=self._sbol3_namespace(cd2),
-                              roles=cd2.roles, sequences=cd2.sequences)
-        self.doc3.add(cp3)
+        comp3 = sbol3.Component(comp_def2.identity, types3, namespace=self._sbol3_namespace(comp_def2),
+                              roles=comp_def2.roles, sequences=comp_def2.sequences)
+        self.doc3.add(comp3)
         # Convert the Component properties not covered by the constructor
-        if cd2.components:
-            raise NotImplementedError('Conversion of ComponentDefinition components '
-                                      'from SBOL2 to SBOL3 not yet implemented')
-        if cd2.sequenceAnnotations:
+        if comp_def2.components:
+            for comp2 in comp_def2.components:
+                self.visit_component(comp2, comp3)
+        if comp_def2.sequenceAnnotations:
             raise NotImplementedError('Conversion of ComponentDefinition sequenceAnnotations '
                                       'from SBOL2 to SBOL3 not yet implemented')
-        if cd2.sequenceConstraints:
+        if comp_def2.sequenceConstraints:
             raise NotImplementedError('Conversion of ComponentDefinition sequenceConstraints '
                                       'from SBOL2 to SBOL3 not yet implemented')
         # Map over all other TopLevel properties and extensions not covered by the constructor
-        self._convert_toplevel(cd2, cp3)
+        self._convert_toplevel(comp_def2, comp3)
 
-    def visit_component(self, comp2: sbol2.Component):
+    def visit_component(self, comp2: sbol2.Component, comp3: sbol3.Component):
         # Priority: 2
         sub3 = sbol3.SubComponent(comp2.identity)
         sub3.roles = comp2.roles
-        sub3.roleIntegration = comp2.role_integration
-        sub3.sourceLocations = comp2.source_locations
+        if comp2.roleIntegration:
+            sub3.role_integration = comp2.roleIntegration
+        if comp2.sourceLocations:
+            sub3.source_locations = comp2.sourceLocations
         sub3.instance_of = comp2.definition
-        self.doc3.add(sub3)
+        comp3.features += [sub3]
 
     def visit_cut(self, a: sbol2.Cut):
         # Priority: 2
