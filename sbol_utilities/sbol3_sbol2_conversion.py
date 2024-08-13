@@ -143,7 +143,7 @@ class SBOL3To2ConversionVisitor:
         # Priority: 2
         raise NotImplementedError('Conversion of CombinatorialDerivation from SBOL3 to SBOL2 not yet implemented')
 
-    def visit_component(self, cp3: sbol3.Component):
+    def visit_component(self, comp3: sbol3.Component):
         # Remap type if it's one of the ones that needs remapping; otherwise pass through unchanged
 
         type_map = {sbol3.SBO_DNA: sbol2.BIOPAX_DNA,  # TODO: distinguish BioPAX Dna from DnaRegion
@@ -151,44 +151,41 @@ class SBOL3To2ConversionVisitor:
                     sbol3.SBO_PROTEIN: sbol2.BIOPAX_PROTEIN,
                     sbol3.SBO_SIMPLE_CHEMICAL: sbol2.BIOPAX_SMALL_MOLECULE,
                     sbol3.SBO_NON_COVALENT_COMPLEX: sbol2.BIOPAX_COMPLEX}
-        types2 = [type_map.get(t, t) for t in cp3.types]
+        types2 = [type_map.get(t, t) for t in comp3.types]
         # Make the Component object and add it to the document
-        cp2 = sbol2.ComponentDefinition(cp3.identity, types2, version=self._sbol2_version(cp3))
-        self.doc2.addComponentDefinition(cp2)
+        compDef2 = sbol2.ComponentDefinition(comp3.identity, types2, version=self._sbol2_version(comp3))
+        self.doc2.addComponentDefinition(compDef2)
         # Convert the Component properties not covered by the constructor
-        cp2.roles = cp3.roles
-        cp2.sequences = cp3.sequences
-        if cp3.features:
-            for feature in cp3.features:
+        compDef2.roles = comp3.roles
+        compDef2.sequences = comp3.sequences
+        if comp3.features:
+            for feature in comp3.features:
                 if type(feature) == sbol3.subcomponent.SubComponent:
-                    try:
-                        self.visit_sub_component(cp3, feature)
-                    except NotImplementedError as e:
-                        print(f"\033[91m{e}\033[0m")
+                    self.visit_sub_component(comp3, feature, compDef2)
                 if type(feature) == sbol3.compref.ComponentReference:
                     try:
                         self.visit_component_reference(feature)
                     except NotImplementedError as e:
                         print(f"\033[91m{e}\033[0m")
-        if cp3.interactions:
-            for interaction in cp3.interactions:
+        if comp3.interactions:
+            for interaction in comp3.interactions:
                 try:
                     self.visit_interaction(interaction)
                 except NotImplementedError as e:
                     print(f"\033[91m{e}\033[0m")
-        if cp3.constraints:
-            for constraint in cp3.constraints:
+        if comp3.constraints:
+            for constraint in comp3.constraints:
                 try:
                     pass
                     self.visit_constraint(constraint)
                 except NotImplementedError as e:
                     print(f"\033[91m{e}\033[0m")
-        if cp3.interface:
+        if comp3.interface:
             raise NotImplementedError('Conversion of Component interface from SBOL3 to SBOL2 not yet implemented')
-        if cp3.models:
+        if comp3.models:
             raise NotImplementedError('Conversion of Component models from SBOL3 to SBOL2 not yet implemented')
         # Map over all other TopLevel properties and extensions not covered by the constructor
-        self._convert_toplevel(cp3, cp2)
+        self._convert_toplevel(comp3, compDef2)
 
     def visit_component_reference(self, comp_ref3: sbol3.ComponentReference):
         # Priority: 3
@@ -304,9 +301,9 @@ class SBOL3To2ConversionVisitor:
         # Priority: 4
         raise NotImplementedError('Conversion of SingularUnit from SBOL3 to SBOL2 not yet implemented')
 
-    def visit_sub_component(self, comp3: sbol3.Component, sub3: sbol3.SubComponent):
+    def visit_sub_component(self, comp3: sbol3.Component, sub3: sbol3.SubComponent,
+                            comp_def2: sbol2.ComponentDefinition):
         # Priority: 1
-
         # Make the Component, Module, or Functional_Component objects and add them to the document
         # TODO Handle converting sub_components into Modules and FunctionalEntities when necessary
         component2 = sbol2.Component(sub3.identity)
@@ -314,12 +311,11 @@ class SBOL3To2ConversionVisitor:
         component2.roleIntegration = sub3.role_integration
         component2.sourceLocations = sub3.source_locations
         component2.definition = sub3.instance_of
-        self.doc2.addComponentDefinition(component2)
+        comp_def2.components.add(component2)
 
-        print(f"components: {self.doc2.componentDefinitions}")
-
-        raise NotImplementedError(
-            'Conversion of SubComponent from SBOL3 to SBOL2 not yet implemented in case of Module and FunctionalEntities')
+        print("components:")
+        for component in comp_def2.components:
+            print(component)
 
     def visit_unit_division(self, a: sbol3.UnitDivision):
         # Priority: 4
