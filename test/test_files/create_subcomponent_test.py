@@ -86,4 +86,4 @@ if report:
 else:
     print('Document is valid')
 
-doc.write('subcomponent_test_3_bare_bones.nt', file_format=SORTED_NTRIPLES)
+doc.write('subcomponent_test.nt', file_format=SORTED_NTRIPLES)

@@ -133,7 +133,8 @@ class TestDirectSBOL2SBOL3Conversion(unittest.TestCase):
         """Test ability to convert a sub_component from SBOL3 to SBOL2"""
         # Load an SBOL3 document and check its contents
         doc3 = sbol3.Document()
-        doc3.read(TEST_FILES / 'subcomponent_test_3_bare_bones.nt')
+        doc3.read(TEST_FILES / 'subcomponent_test_3.nt')
+
         # Convert to SBOL2 and check contents
         doc2 = sbol2.Document()
         doc2 = convert3to2(doc3, use_native_converter=True)
@@ -151,8 +152,9 @@ class TestDirectSBOL2SBOL3Conversion(unittest.TestCase):
             # self.assertFalse(file_diff(str(tmp2), str(TEST_FILES / 'sbol_3to2_collection.xml')))
             doc3_loop = convert2to3(doc2, use_native_converter=True)
             self.assertEqual(len(doc3_loop.validate()), 0)
-            tmp3 = Path(tmpdir) / 'doc3_loop.nt'
+            tmp3 = 'doc3_loop.nt'
             doc3_loop.write(tmp3)
+
 
             print("DOC_3")
             print(doc3)
@@ -160,13 +162,15 @@ class TestDirectSBOL2SBOL3Conversion(unittest.TestCase):
             for object in doc3.objects:
                 if type(object) == sbol3.component.Component:
                     component_list.append(object)
-            subcomponent_list = []
             for component in component_list:
                 print(component.display_id)
-                print(f"Type: {component.types}")
+                print(f"Component Type: {component.types}")
                 for feat in component.features:
                     if type(feat) == sbol3.subcomponent.SubComponent:
-                        print(f"\tInstance Of: {feat.instance_of}")
+                        print("\tSubComponent:")
+                        print(f"\t\tName: {feat.name}")
+                        print(f"\t\tDescription: {feat.description}")
+                        print(f"\t\tInstance Of: {feat.instance_of}")
                         print(f"\t\tRoles: {feat.roles}")
                         print(f"\t\tRole Integration: {feat.role_integration}")
                         print(f"\t\tSource Locations: {feat.source_locations}")
@@ -181,16 +185,21 @@ class TestDirectSBOL2SBOL3Conversion(unittest.TestCase):
 
             print("\nDOCK_3_loop")
             print(doc3_loop)
-            component_list = []
             for object in doc3_loop.objects:
                 if type(object) == sbol3.component.Component:
                     component_list.append(object)
             for component in component_list:
                 print(component.display_id)
+                print(f"Component Type: {component.types}")
                 for feat in component.features:
-                    print("\t" + str(type(feat)))
+                    if type(feat) == sbol3.subcomponent.SubComponent:
+                        print("\tSubComponent:")
+                        print(f"\t\tInstance Of: {feat.instance_of}")
+                        print(f"\t\tRoles: {feat.roles}")
+                        print(f"\t\tRole Integration: {feat.role_integration}")
+                        print(f"\t\tSource Locations: {feat.source_locations}")
 
-            self.assertFalse(file_diff(str(tmp3), str(TEST_FILES / 'subcomponent_test_3_bare_bones.nt')))
+            self.assertFalse(file_diff(str(tmp3), str(TEST_FILES / 'subcomponent_test_3.nt')))
 
 
 

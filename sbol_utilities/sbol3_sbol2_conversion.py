@@ -145,6 +145,7 @@ class SBOL3To2ConversionVisitor:
 
     def visit_component(self, cp3: sbol3.Component):
         # Remap type if it's one of the ones that needs remapping; otherwise pass through unchanged
+
         type_map = {sbol3.SBO_DNA: sbol2.BIOPAX_DNA,  # TODO: distinguish BioPAX Dna from DnaRegion
                     sbol3.SBO_RNA: sbol2.BIOPAX_RNA,  # TODO: distinguish BioPAX Rna from RnaRegion
                     sbol3.SBO_PROTEIN: sbol2.BIOPAX_PROTEIN,
@@ -161,7 +162,7 @@ class SBOL3To2ConversionVisitor:
             for feature in cp3.features:
                 if type(feature) == sbol3.subcomponent.SubComponent:
                     try:
-                        self.visit_sub_component(feature)
+                        self.visit_sub_component(cp3, feature)
                     except NotImplementedError as e:
                         print(f"\033[91m{e}\033[0m")
                 if type(feature) == sbol3.compref.ComponentReference:
@@ -205,9 +206,6 @@ class SBOL3To2ConversionVisitor:
             remote = sbol2.Component(self.doc3.find(constraint.subject).refers_to)
             maps_to.local = local
             maps_to.remote = remote
-
-
-
 
         if constraint.restriction == "http://sbols.org/v3#replaces":
             raise NotImplementedError(
@@ -306,9 +304,8 @@ class SBOL3To2ConversionVisitor:
         # Priority: 4
         raise NotImplementedError('Conversion of SingularUnit from SBOL3 to SBOL2 not yet implemented')
 
-    def visit_sub_component(self, sub3: sbol3.SubComponent):
+    def visit_sub_component(self, comp3: sbol3.Component, sub3: sbol3.SubComponent):
         # Priority: 1
-
 
         # Make the Component, Module, or Functional_Component objects and add them to the document
         # TODO Handle converting sub_components into Modules and FunctionalEntities when necessary
@@ -316,20 +313,13 @@ class SBOL3To2ConversionVisitor:
         component2.roles = sub3.roles
         component2.roleIntegration = sub3.role_integration
         component2.sourceLocations = sub3.source_locations
+        component2.definition = sub3.instance_of
         self.doc2.addComponentDefinition(component2)
 
-        module2 = sbol2.Module(sub3.identity)
-        module2.definition = sub3.instance_of
-        print("JKLFDSJZFKLDSJLKSDJKLDS")
-        print(module2)
-        self.doc2.addModuleDefinition(module2)
-        # print(f"Module: {self.doc2.getModuleDefinition('https://synbiohub.org/public/igem/device1_ecoli/SubComponent3')}")
         print(f"components: {self.doc2.componentDefinitions}")
-
 
         raise NotImplementedError(
             'Conversion of SubComponent from SBOL3 to SBOL2 not yet implemented in case of Module and FunctionalEntities')
-
 
     def visit_unit_division(self, a: sbol3.UnitDivision):
         # Priority: 4
@@ -482,11 +472,11 @@ class SBOL2To3ConversionVisitor:
     def visit_component(self, comp2: sbol2.Component):
         # Priority: 2
         sub3 = sbol3.SubComponent(comp2.identity)
-        comp2.roles = sub3.roles
-        comp2.roleIntegration = sub3.role_integration
-        comp2.sourceLocations = sub3.source_locations
+        sub3.roles = comp2.roles
+        sub3.roleIntegration = comp2.role_integration
+        sub3.sourceLocations = comp2.source_locations
+        sub3.instance_of = comp2.definition
         self.doc3.add(sub3)
-        raise NotImplementedError('Conversion of Component from SBOL2 to SBOL3 not yet implemented')
 
     def visit_cut(self, a: sbol2.Cut):
         # Priority: 2
@@ -566,9 +556,14 @@ class SBOL2To3ConversionVisitor:
         # Priority: 3
         raise NotImplementedError('Conversion of Module from SBOL2 to SBOL3 not yet implemented')
 
-    def visit_module_definition(self, a: sbol2.ModuleDefinition):
+    def visit_module_definition(self, md2: sbol2.ModuleDefinition):
         # Priority: 3
-        raise NotImplementedError('Conversion of ModuleDefinition from SBOL2 to SBOL3 not yet implemented')
+
+        # Make the Component object and add it to the document
+        cp3 = sbol3.Component(md2.identity, types=['https://identifiers.org/SBO:0000241'])
+        self.doc3.add(cp3)
+        # Map over all other TopLevel properties and extensions not covered by the constructor
+        self._convert_toplevel(md2, cp3)
 
     def visit_participation(self, a: sbol2.Participation):
         # Priority: 2
