@@ -153,15 +153,15 @@ class SBOL3To2ConversionVisitor:
                     sbol3.SBO_NON_COVALENT_COMPLEX: sbol2.BIOPAX_COMPLEX}
         types2 = [type_map.get(t, t) for t in comp3.types]
         # Make the Component object and add it to the document
-        compDef2 = sbol2.ComponentDefinition(comp3.identity, types2, version=self._sbol2_version(comp3))
-        self.doc2.addComponentDefinition(compDef2)
+        comp_def2 = sbol2.ComponentDefinition(comp3.identity, types2, version=self._sbol2_version(comp3))
+        self.doc2.addComponentDefinition(comp_def2)
         # Convert the Component properties not covered by the constructor
-        compDef2.roles = comp3.roles
-        compDef2.sequences = comp3.sequences
+        comp_def2.roles = comp3.roles
+        comp_def2.sequences = comp3.sequences
         if comp3.features:
             for feature in comp3.features:
                 if type(feature) == sbol3.subcomponent.SubComponent:
-                    self.visit_sub_component(comp3, feature, compDef2)
+                    self.visit_sub_component(feature, comp_def2)
                 if type(feature) == sbol3.compref.ComponentReference:
                     try:
                         self.visit_component_reference(feature)
@@ -185,7 +185,7 @@ class SBOL3To2ConversionVisitor:
         if comp3.models:
             raise NotImplementedError('Conversion of Component models from SBOL3 to SBOL2 not yet implemented')
         # Map over all other TopLevel properties and extensions not covered by the constructor
-        self._convert_toplevel(comp3, compDef2)
+        self._convert_toplevel(comp3, comp_def2)
 
     def visit_component_reference(self, comp_ref3: sbol3.ComponentReference):
         # Priority: 3
@@ -301,21 +301,20 @@ class SBOL3To2ConversionVisitor:
         # Priority: 4
         raise NotImplementedError('Conversion of SingularUnit from SBOL3 to SBOL2 not yet implemented')
 
-    def visit_sub_component(self, comp3: sbol3.Component, sub3: sbol3.SubComponent,
+    def visit_sub_component(self, sub3: sbol3.SubComponent,
                             comp_def2: sbol2.ComponentDefinition):
         # Priority: 1
         # Make the Component, Module, or Functional_Component objects and add them to the document
         # TODO Handle converting sub_components into Modules and FunctionalEntities when necessary
-        component2 = sbol2.Component(sub3.identity)
-        component2.roles = sub3.roles
-        component2.roleIntegration = sub3.role_integration
-        component2.sourceLocations = sub3.source_locations
-        component2.definition = sub3.instance_of
-        comp_def2.components.add(component2)
-
-        print("components:")
-        for component in comp_def2.components:
-            print(component)
+        comp2 = sbol2.Component(sub3.identity)
+        comp2.roles = sub3.roles
+        comp2.roleIntegration = sub3.role_integration
+        comp2.sourceLocations = sub3.source_locations
+        comp2.definition = sub3.instance_of
+        comp_def2.components.add(comp2)
+        print(comp_def2)
+        print(f"SBOL3: {sub3} -> {sub3.instance_of}")
+        print(f"SBOL2: {comp2} -> {comp2.definition}")
 
     def visit_unit_division(self, a: sbol3.UnitDivision):
         # Priority: 4
@@ -455,6 +454,9 @@ class SBOL2To3ConversionVisitor:
         # Convert the Component properties not covered by the constructor
         if comp_def2.components:
             for comp2 in comp_def2.components:
+                print(comp2)
+        if comp_def2.components:
+            for comp2 in comp_def2.components:
                 self.visit_component(comp2, comp3)
         if comp_def2.sequenceAnnotations:
             raise NotImplementedError('Conversion of ComponentDefinition sequenceAnnotations '
@@ -475,7 +477,9 @@ class SBOL2To3ConversionVisitor:
             sub3.source_locations = comp2.sourceLocations
         sub3.instance_of = comp2.definition
         comp3.features += [sub3]
-
+        print(comp3)
+        print(f"SBOL2: {comp2} -> {comp2.definition}")
+        print(f"SBOL3: {sub3} -> {sub3.instance_of}")
     def visit_cut(self, a: sbol2.Cut):
         # Priority: 2
         raise NotImplementedError('Conversion of Cut from SBOL2 to SBOL3 not yet implemented')
