@@ -475,16 +475,12 @@ class SBOL2To3ConversionVisitor:
         with open(temporary_file, 'r+') as file:
             triples = file.readlines()
             for index, triple in enumerate(triples):
-                for old_identity, new_identity in identity_mappings:
+                for old_identity, new_identity in identity_mappings.items():
                     if f"<{old_identity}> <http://sbols.org/v3#instanceOf>" in triple:
                         triples[index] = triple.replace(old_identity, new_identity)
-            # Move the file pointer to the beginning
+
             file.seek(0)
-
-            # Write the modified triples back to the file
-            file.writelines(triple + "\n" for triple in triples)
-
-            # Truncate the file to the current position to remove any leftover data
+            file.writelines(triples)
             file.truncate()
         self.doc3.read('temporary_file.nt')
         os.remove(temporary_file)
