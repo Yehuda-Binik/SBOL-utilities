@@ -1,4 +1,5 @@
-import os
+import tempfile
+from pathlib import Path
 
 import sbol3
 import sbol2
@@ -455,7 +456,7 @@ class SBOL2To3ConversionVisitor:
                                       'from SBOL2 to SBOL3 not yet implemented')
         # Map over all other TopLevel properties and extensions not covered by the constructor
         self._convert_toplevel(comp_def2, comp3)
-        self.set_subcomponent_identities(identity_mappings)
+        self.handle_subcomponent_identity_triple_surgery(identity_mappings)
 
     def visit_component(self, comp2: sbol2.Component, comp3: sbol3.Component, identity_mappings):
         # Priority: 2
@@ -469,21 +470,22 @@ class SBOL2To3ConversionVisitor:
         comp3.features += [sub3]
         identity_mappings[sub3.identity] = comp2.identity
 
-    def set_subcomponent_identities(self, identity_mappings):
-        temporary_file = 'temporary_file.nt'
-        self.doc3.write(temporary_file)
-        with open(temporary_file, 'r+') as file:
-            triples = file.readlines()
-            for index, triple in enumerate(triples):
-                for old_identity, new_identity in identity_mappings.items():
-                    if f"<{old_identity}> <http://sbols.org/v3#instanceOf>" in triple:
-                        triples[index] = triple.replace(old_identity, new_identity)
+    def handle_subcomponent_identity_triple_surgery(self, identity_mappings):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            temporary_file = Path(tmpdir) / 'temporary_file.nt'
+            self.doc3.write(temporary_file)
+            with open(temporary_file, 'r+') as file:
 
-            file.seek(0)
-            file.writelines(triples)
-            file.truncate()
-        self.doc3.read('temporary_file.nt')
-        os.remove(temporary_file)
+                triples = file.readlines()
+                for index, triple in enumerate(triples):
+                    for old_identity, new_identity in identity_mappings.items():
+                        if f"<{old_identity}> <http://sbols.org/v3#instanceOf>" in triple:
+                            triples[index] = triple.replace(old_identity, new_identity)
+
+                file.seek(0)
+                file.writelines(triples)
+                file.truncate()
+            self.doc3.read(temporary_file)
 
     def visit_cut(self, a: sbol2.Cut):
         # Priority: 2
