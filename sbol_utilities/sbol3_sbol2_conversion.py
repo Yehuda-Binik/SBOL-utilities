@@ -24,7 +24,6 @@ class SBOL3To2ConversionVisitor:
     doc2: sbol2.Document
 
     def __init__(self, doc3: sbol3.Document):
-        self.doc3 = doc3
         # Create the target document
         self.doc2 = sbol2.Document()
         #   # Immediately run the conversion
@@ -147,7 +146,6 @@ class SBOL3To2ConversionVisitor:
 
     def visit_component(self, comp3: sbol3.Component):
         # Remap type if it's one of the ones that needs remapping; otherwise pass through unchanged
-
         type_map = {sbol3.SBO_DNA: sbol2.BIOPAX_DNA,  # TODO: distinguish BioPAX Dna from DnaRegion
                     sbol3.SBO_RNA: sbol2.BIOPAX_RNA,  # TODO: distinguish BioPAX Rna from RnaRegion
                     sbol3.SBO_PROTEIN: sbol2.BIOPAX_PROTEIN,
@@ -164,11 +162,15 @@ class SBOL3To2ConversionVisitor:
             for feature in comp3.features:
                 if type(feature) == sbol3.subcomponent.SubComponent:
                     self.visit_sub_component(feature, comp_def2)
-                if type(feature) == sbol3.compref.ComponentReference:
+                elif type(feature) == sbol3.compref.ComponentReference:
                     try:
                         self.visit_component_reference(feature)
                     except NotImplementedError as e:
+                        # highlights the error message in red.
                         print(f"\033[91m{e}\033[0m")
+                else:
+                    raise NotImplementedError(
+                        'Conversion of Component features from SBOL3 to SBOL2 not yet implemented')
         if comp3.interactions:
             for interaction in comp3.interactions:
                 try:
@@ -195,8 +197,7 @@ class SBOL3To2ConversionVisitor:
 
     def visit_constraint(self, constraint: sbol3.Constraint):
         # Priority: 2
-        raise NotImplementedError(
-                'Conversion of Constraint from SBOL3 to SBOL2 not yet implemented')
+        raise NotImplementedError('Conversion of Constraint from SBOL3 to SBOL2 not yet implemented')
 
     def visit_cut(self, a: sbol3.Cut):
         # Priority: 2
@@ -437,7 +438,7 @@ class SBOL2To3ConversionVisitor:
         types3 = [type_map.get(t, t) for t in comp_def2.types]
         # Make the Component object and add it to the document
         comp3 = sbol3.Component(comp_def2.identity, types3, namespace=self._sbol3_namespace(comp_def2),
-                              roles=comp_def2.roles, sequences=comp_def2.sequences)
+                                roles=comp_def2.roles, sequences=comp_def2.sequences)
         self.doc3.add(comp3)
 
         # Convert the Component properties not covered by the constructor
@@ -456,7 +457,6 @@ class SBOL2To3ConversionVisitor:
         self._convert_toplevel(comp_def2, comp3)
         self.set_subcomponent_identities(sub3_comp2_equivalencies)
 
-
     def visit_component(self, comp2: sbol2.Component, comp3: sbol3.Component, sub3_comp2_equivalencies):
         # Priority: 2
         sub3 = sbol3.SubComponent(comp2.identity)
@@ -467,7 +467,7 @@ class SBOL2To3ConversionVisitor:
             sub3.source_locations = comp2.sourceLocations
         sub3.instance_of = comp2.definition
         comp3.features += [sub3]
-        sub3_comp2_equivalencies[f"<{sub3.identity}> <http://sbols.org/v3#instanceOf>"] = f"<{comp2.identity}> <http://sbols.org/v3#instanceOf>"
+        sub3_comp2_equivalencies[sub3.identity] = comp2.identity
 
     def set_subcomponent_identities(self, sub3_comp2_equivalencies):
         temporary_file = 'temporary_file.nt'
@@ -477,7 +477,7 @@ class SBOL2To3ConversionVisitor:
             triples = content.splitlines()
             for index, triple in enumerate(triples):
                 for sub3 in sub3_comp2_equivalencies:
-                    if sub3 in triple:
+                    if f"<{sub3}> <http://sbols.org/v3#instanceOf>" in triple:
                         triples[index] = triple.replace(sub3, sub3_comp2_equivalencies[sub3])
             # Move the file pointer to the beginning
             file.seek(0)
