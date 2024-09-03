@@ -442,10 +442,10 @@ class SBOL2To3ConversionVisitor:
         self.doc3.add(comp3)
 
         # Convert the Component properties not covered by the constructor
-        sub3_comp2_equivalencies = {}
+        identity_mappings = {}
         if comp_def2.components:
             for comp2 in comp_def2.components:
-                self.visit_component(comp2, comp3, sub3_comp2_equivalencies)
+                self.visit_component(comp2, comp3, identity_mappings)
 
         if comp_def2.sequenceAnnotations:
             raise NotImplementedError('Conversion of ComponentDefinition sequenceAnnotations '
@@ -455,9 +455,9 @@ class SBOL2To3ConversionVisitor:
                                       'from SBOL2 to SBOL3 not yet implemented')
         # Map over all other TopLevel properties and extensions not covered by the constructor
         self._convert_toplevel(comp_def2, comp3)
-        self.set_subcomponent_identities(sub3_comp2_equivalencies)
+        self.set_subcomponent_identities(identity_mappings)
 
-    def visit_component(self, comp2: sbol2.Component, comp3: sbol3.Component, sub3_comp2_equivalencies):
+    def visit_component(self, comp2: sbol2.Component, comp3: sbol3.Component, identity_mappings):
         # Priority: 2
         sub3 = sbol3.SubComponent(comp2.identity)
         sub3.roles = comp2.roles
@@ -467,18 +467,17 @@ class SBOL2To3ConversionVisitor:
             sub3.source_locations = comp2.sourceLocations
         sub3.instance_of = comp2.definition
         comp3.features += [sub3]
-        sub3_comp2_equivalencies[sub3.identity] = comp2.identity
+        identity_mappings[sub3.identity] = comp2.identity
 
-    def set_subcomponent_identities(self, sub3_comp2_equivalencies):
+    def set_subcomponent_identities(self, identity_mappings):
         temporary_file = 'temporary_file.nt'
         self.doc3.write(temporary_file)
         with open(temporary_file, 'r+') as file:
-            content = file.read()
-            triples = content.splitlines()
+            triples = file.readlines()
             for index, triple in enumerate(triples):
-                for sub3 in sub3_comp2_equivalencies:
-                    if f"<{sub3}> <http://sbols.org/v3#instanceOf>" in triple:
-                        triples[index] = triple.replace(sub3, sub3_comp2_equivalencies[sub3])
+                for old_identity, new_identity in identity_mappings:
+                    if f"<{old_identity}> <http://sbols.org/v3#instanceOf>" in triple:
+                        triples[index] = triple.replace(old_identity, new_identity)
             # Move the file pointer to the beginning
             file.seek(0)
 
