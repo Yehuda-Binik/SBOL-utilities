@@ -195,20 +195,8 @@ class SBOL3To2ConversionVisitor:
 
     def visit_constraint(self, constraint: sbol3.Constraint):
         # Priority: 2
-
-        if constraint.restriction == "http://sbols.org/v3#verifyIdentical":
-            maps_to = sbol2.mapsto.MapsTo(constraint.identity, refinement="http://sbols.org/v2#verifyIdentical")
-            module_definition = sbol2.ModuleDefinition(constraint.identity)
-            module_definition.modules.add(maps_to)
-            self.doc2.addModuleDefinition(module_definition)
-            local = sbol2.Component(constraint.object)
-            remote = sbol2.Component(self.doc3.find(constraint.subject).refers_to)
-            maps_to.local = local
-            maps_to.remote = remote
-
-        if constraint.restriction == "http://sbols.org/v3#replaces":
-            raise NotImplementedError(
-                'Conversion of Constraint from SBOL3 to SBOL2 with replaces restriction not yet implemented')
+        raise NotImplementedError(
+                'Conversion of Constraint from SBOL3 to SBOL2 not yet implemented')
 
     def visit_cut(self, a: sbol3.Cut):
         # Priority: 2
@@ -582,12 +570,7 @@ class SBOL2To3ConversionVisitor:
 
     def visit_module_definition(self, md2: sbol2.ModuleDefinition):
         # Priority: 3
-
-        # Make the Component object and add it to the document
-        cp3 = sbol3.Component(md2.identity, types=['https://identifiers.org/SBO:0000241'])
-        self.doc3.add(cp3)
-        # Map over all other TopLevel properties and extensions not covered by the constructor
-        self._convert_toplevel(md2, cp3)
+        raise NotImplementedError('Conversion of ModuleDefinition from SBOL2 to SBOL3 not yet implemented')
 
     def visit_participation(self, a: sbol2.Participation):
         # Priority: 2

@@ -153,12 +153,8 @@ class TestDirectSBOL2SBOL3Conversion(unittest.TestCase):
 
             doc3_loop = convert2to3(doc2, use_native_converter=True)
             self.assertEqual(len(doc3_loop.validate()), 0)
-            tmp3 = 'doc3_loop.nt'
+            tmp3 = Path(tmpdir) / 'doc3_loop.nt'
             doc3_loop.write(tmp3)
-            with open(tmp3, 'r') as file:
-                data = file.read()
-
-
 
             self.assertFalse(file_diff(str(tmp3), str(TEST_FILES / 'subcomponent_test_3.nt')))
 
