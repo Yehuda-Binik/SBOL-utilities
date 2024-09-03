@@ -1,3 +1,5 @@
+import os
+
 import sbol3
 import sbol2
 from sbol2 import mapsto, model, sequenceconstraint
@@ -311,10 +313,8 @@ class SBOL3To2ConversionVisitor:
         comp2.roleIntegration = sub3.role_integration
         comp2.sourceLocations = sub3.source_locations
         comp2.definition = sub3.instance_of
+        comp2.displayId = sub3.display_id
         comp_def2.components.add(comp2)
-        print(comp_def2)
-        print(f"SBOL3: {sub3} -> {sub3.instance_of}")
-        print(f"SBOL2: {comp2} -> {comp2.definition}")
 
     def visit_unit_division(self, a: sbol3.UnitDivision):
         # Priority: 4
@@ -437,7 +437,7 @@ class SBOL2To3ConversionVisitor:
         # Priority: 2
         raise NotImplementedError('Conversion of CombinatorialDerivation from SBOL2 to SBOL3 not yet implemented')
 
-    def visit_component_definition(self, comp_def2: sbol2.ComponentDefinition):
+    def visit_component_definition(self, comp_def2: sbol2.ComponentDefinition, sub3_comp2_equivalencies=None):
         # Remap type if it's one of the ones that needs remapping; otherwise pass through unchanged
         type_map = {sbol2.BIOPAX_DNA: sbol3.SBO_DNA,
                     'http://www.biopax.org/release/biopax-level3.owl#Dna': sbol3.SBO_DNA,  # TODO: make reversible
@@ -451,13 +451,13 @@ class SBOL2To3ConversionVisitor:
         comp3 = sbol3.Component(comp_def2.identity, types3, namespace=self._sbol3_namespace(comp_def2),
                               roles=comp_def2.roles, sequences=comp_def2.sequences)
         self.doc3.add(comp3)
+
         # Convert the Component properties not covered by the constructor
+        sub3_comp2_equivalencies = {}
         if comp_def2.components:
             for comp2 in comp_def2.components:
-                print(comp2)
-        if comp_def2.components:
-            for comp2 in comp_def2.components:
-                self.visit_component(comp2, comp3)
+                self.visit_component(comp2, comp3, sub3_comp2_equivalencies)
+
         if comp_def2.sequenceAnnotations:
             raise NotImplementedError('Conversion of ComponentDefinition sequenceAnnotations '
                                       'from SBOL2 to SBOL3 not yet implemented')
@@ -466,8 +466,10 @@ class SBOL2To3ConversionVisitor:
                                       'from SBOL2 to SBOL3 not yet implemented')
         # Map over all other TopLevel properties and extensions not covered by the constructor
         self._convert_toplevel(comp_def2, comp3)
+        self.set_subcomponent_identities(sub3_comp2_equivalencies)
 
-    def visit_component(self, comp2: sbol2.Component, comp3: sbol3.Component):
+
+    def visit_component(self, comp2: sbol2.Component, comp3: sbol3.Component, sub3_comp2_equivalencies):
         # Priority: 2
         sub3 = sbol3.SubComponent(comp2.identity)
         sub3.roles = comp2.roles
@@ -477,9 +479,29 @@ class SBOL2To3ConversionVisitor:
             sub3.source_locations = comp2.sourceLocations
         sub3.instance_of = comp2.definition
         comp3.features += [sub3]
-        print(comp3)
-        print(f"SBOL2: {comp2} -> {comp2.definition}")
-        print(f"SBOL3: {sub3} -> {sub3.instance_of}")
+        sub3_comp2_equivalencies[f"<{sub3.identity}> <http://sbols.org/v3#instanceOf>"] = f"<{comp2.identity}> <http://sbols.org/v3#instanceOf>"
+
+    def set_subcomponent_identities(self, sub3_comp2_equivalencies):
+        temporary_file = 'temporary_file.nt'
+        self.doc3.write(temporary_file)
+        with open(temporary_file, 'r+') as file:
+            content = file.read()
+            triples = content.splitlines()
+            for index, triple in enumerate(triples):
+                for sub3 in sub3_comp2_equivalencies:
+                    if sub3 in triple:
+                        triples[index] = triple.replace(sub3, sub3_comp2_equivalencies[sub3])
+            # Move the file pointer to the beginning
+            file.seek(0)
+
+            # Write the modified triples back to the file
+            file.writelines(triple + "\n" for triple in triples)
+
+            # Truncate the file to the current position to remove any leftover data
+            file.truncate()
+        self.doc3.read('temporary_file.nt')
+        os.remove(temporary_file)
+
     def visit_cut(self, a: sbol2.Cut):
         # Priority: 2
         raise NotImplementedError('Conversion of Cut from SBOL2 to SBOL3 not yet implemented')

@@ -129,6 +129,7 @@ class TestDirectSBOL2SBOL3Conversion(unittest.TestCase):
             doc2_loop.write(tmp2)
             self.assertFalse(file_diff(str(tmp2), str(TEST_FILES / 'sbol_3to2_collection.xml')))
 
+    # @unittest.skip("Feature in Progress")
     def test_3to2_subcomponent_test(self):
         """Test ability to convert a sub_component from SBOL3 to SBOL2"""
         # Load an SBOL3 document and check its contents
@@ -148,26 +149,20 @@ class TestDirectSBOL2SBOL3Conversion(unittest.TestCase):
                 # Read the contents of the file
                 file_contents = file.read()
 
-                # Print the contents
-                print(file_contents)
             # self.assertFalse(file_diff(str(tmp2), str(TEST_FILES / 'sbol_3to2_collection.xml')))
 
             doc3_loop = convert2to3(doc2, use_native_converter=True)
             self.assertEqual(len(doc3_loop.validate()), 0)
             tmp3 = 'doc3_loop.nt'
             doc3_loop.write(tmp3)
-
-            print()
-            with open(tmp3, "r") as file:
-                # Read the contents of the file
-                file_contents = file.read()
-
-                # Print the contents
-                print(file_contents)
+            with open(tmp3, 'r') as file:
+                data = file.read()
 
 
 
             self.assertFalse(file_diff(str(tmp3), str(TEST_FILES / 'subcomponent_test_3.nt')))
+
+    # ToDo: add a test with two components, each with two subcomponents
 
 
 if __name__ == '__main__':
